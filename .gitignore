@@ -29,3 +29,4 @@ Thumbs.db
 # Docker
 *.tar
 .vercel
+.vercel
