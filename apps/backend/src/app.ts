@@ -11,6 +11,7 @@ import authRoutes from "./modules/auth/auth.routes";
 import reminderRoutes from "./modules/reminders/reminder.routes";
 import pushRoutes from "./notifications/push.routes";
 import priceRoutes from "./modules/prices/price.routes";
+import userRoutes from "./modules/users/user.routes";
 
 const app: Application = express();
 
@@ -54,6 +55,7 @@ app.use(`${CONSTANTS.API_PREFIX}/auth`, authRoutes);
 app.use(`${CONSTANTS.API_PREFIX}/reminders`, reminderRoutes);
 app.use(`${CONSTANTS.API_PREFIX}/push`, pushRoutes);
 app.use(`${CONSTANTS.API_PREFIX}/prices`, priceRoutes);
+  app.use(`${CONSTANTS.API_PREFIX}/users`, userRoutes);
 
 // ─── Error Handling ─────────────────────────────────────────────
 app.use(notFoundHandler);
