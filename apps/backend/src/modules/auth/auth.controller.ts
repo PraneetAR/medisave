@@ -14,14 +14,22 @@ export class AuthController {
           refreshToken,
         })
       );
-    } catch (err) {
-      next(err);
-    }
+    } catch (err) { next(err); }
   }
 
   async login(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { user, accessToken, refreshToken } = await authService.login(req.body);
+      // Get real IP (works behind Render proxy)
+      const ip =
+        (req.headers["x-forwarded-for"] as string)?.split(",")[0].trim() ??
+        req.socket.remoteAddress ??
+        "unknown";
+
+      const { user, accessToken, refreshToken } = await authService.login(
+        req.body,
+        ip
+      );
+
       res.status(200).json(
         new ApiResponse(200, "Login successful", {
           user,
@@ -29,9 +37,7 @@ export class AuthController {
           refreshToken,
         })
       );
-    } catch (err) {
-      next(err);
-    }
+    } catch (err) { next(err); }
   }
 
   async refresh(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -39,18 +45,14 @@ export class AuthController {
       const { refreshToken } = req.body;
       const tokens = await authService.refreshTokens(refreshToken);
       res.status(200).json(new ApiResponse(200, "Tokens refreshed", tokens));
-    } catch (err) {
-      next(err);
-    }
+    } catch (err) { next(err); }
   }
 
   async me(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const user = await authService.getMe(req.user!.userId);
       res.status(200).json(new ApiResponse(200, "User fetched", user));
-    } catch (err) {
-      next(err);
-    }
+    } catch (err) { next(err); }
   }
 }
 

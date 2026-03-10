@@ -8,9 +8,14 @@ export interface IUser extends Document {
   passwordHash: string;
   timezone: string;
   refreshToken: string | null;
+  failedLoginAttempts: number;
+  lockUntil: Date | null;
+  lastLoginAt: Date | null;
+  lastLoginIp: string | null;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
+  isLocked(): boolean;
 }
 
 const userSchema = new Schema<IUser>(
@@ -44,30 +49,56 @@ const userSchema = new Schema<IUser>(
       default: null,
       select: false,
     },
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+      select: false,
+    },
+    lockUntil: {
+      type: Date,
+      default: null,
+      select: false,
+    },
+    lastLoginAt: {
+      type: Date,
+      default: null,
+    },
+    lastLoginIp: {
+      type: String,
+      default: null,
+    },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-// ✅ Fix 1: removed `next` param — use async pre hook without it
+// Hash password before saving
 userSchema.pre("save", async function () {
   if (!this.isModified("passwordHash")) return;
-  this.passwordHash = await bcrypt.hash(this.passwordHash, CONSTANTS.SALT_ROUNDS);
+  this.passwordHash = await bcrypt.hash(
+    this.passwordHash,
+    CONSTANTS.SALT_ROUNDS
+  );
 });
 
-// Compare password method
+// Check if account is locked
+userSchema.methods.isLocked = function (): boolean {
+  return !!(this.lockUntil && this.lockUntil > new Date());
+};
+
+// Compare password
 userSchema.methods.comparePassword = async function (
   candidatePassword: string
 ): Promise<boolean> {
   return bcrypt.compare(candidatePassword, this.passwordHash);
 };
 
-// ✅ Fix 2: cast ret to Record<string, unknown> so delete is allowed
+// Remove sensitive fields from JSON output
 userSchema.set("toJSON", {
   transform: (_doc: any, ret: any) => {
     delete ret.passwordHash;
     delete ret.refreshToken;
+    delete ret.failedLoginAttempts;
+    delete ret.lockUntil;
     delete ret.__v;
     return ret;
   },
