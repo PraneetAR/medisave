@@ -63,11 +63,11 @@ export default function LoginPage() {
           </h2>
           <p className="text-sm leading-relaxed"
             style={{ color: "rgba(255,255,255,0.5)" }}>
-            Never miss a dose. Always find the best price.
+            Manage medicines smarter. Pay less every time.
           </p>
         </div>
         <div className="flex flex-col gap-2">
-          {["💊 Smart reminders", "💰 Price comparison", "🔔 Push alerts"].map((f) => (
+          {["                                                                   "].map((f) => (
             <span key={f} className="text-xs"
               style={{ color: "rgba(255,255,255,0.4)" }}>
               {f}
