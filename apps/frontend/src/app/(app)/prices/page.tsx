@@ -27,7 +27,7 @@ interface SearchResult {
 
 const PLATFORM_COLORS: Record<string, string> = {
   PharmEasy: "bg-green-100 text-green-800",
-  Netmeds:   "bg-blue-100  text-blue-800",
+  Netmeds:   "bg-blue-100 text-blue-800",
   Medkart:   "bg-purple-100 text-purple-800",
 };
 
@@ -36,6 +36,64 @@ const SUGGESTIONS = [
   "metformin", "atorvastatin", "azithromycin",
   "cetirizine", "vitamin d3", "pantoprazole",
 ];
+
+function MedicineCard({ med }: { med: Medicine }) {
+  const hasDiscount = med.discount && med.discount > 0;
+  const hasMrp      = med.mrp && med.mrp > med.price;
+
+  return (
+    
+      href={med.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-sm transition-all bg-white flex gap-3"
+    >
+      {med.imageUrl ? (
+        <img
+          src={med.imageUrl}
+          alt={med.medicineName}
+          className="w-14 h-14 object-contain rounded-lg bg-gray-50 flex-shrink-0"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = "none";
+          }}
+        />
+      ) : (
+        <div className="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 text-xl">
+          💊
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-semibold text-gray-800 leading-tight line-clamp-2 mb-1">
+          {med.medicineName}
+        </p>
+        <p className="text-xs text-gray-400 mb-2">{med.unit}</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-sm font-bold text-gray-900">
+              ₹{med.price}
+            </span>
+            {hasMrp && (
+              <span className="text-xs text-gray-400 line-through ml-1">
+                ₹{med.mrp}
+              </span>
+            )}
+          </div>
+          {hasDiscount ? (
+            <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
+              {med.discount}% off
+            </span>
+          ) : (
+            !med.inStock && (
+              <span className="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded">
+                Out of stock
+              </span>
+            )
+          )}
+        </div>
+      </div>
+    </a>
+  );
+}
 
 export default function PricesPage() {
   const [query,   setQuery]   = useState("");
@@ -61,15 +119,11 @@ export default function PricesPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto">
 
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Medicine Price Comparison</h1>
-        <p className="text-gray-500 mt-1">
-          Compare prices across PharmEasy, Netmeds & Medkart
-        </p>
+        <p className="text-gray-500 mt-1">Compare prices across PharmEasy, Netmeds and Medkart</p>
       </div>
 
-      {/* Search Box */}
       <div className="flex gap-3 mb-4">
         <input
           type="text"
@@ -88,7 +142,6 @@ export default function PricesPage() {
         </button>
       </div>
 
-      {/* Suggestions */}
       <div className="flex flex-wrap gap-2 mb-8">
         {SUGGESTIONS.map((s) => (
           <button
@@ -101,22 +154,19 @@ export default function PricesPage() {
         ))}
       </div>
 
-      {/* Error */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm">
           {error}
         </div>
       )}
 
-      {/* Results */}
       {results && (
         <div>
-
-          {/* Summary */}
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-gray-500">
-              <span className="font-semibold text-gray-800">{results.totalFound}</span> results
-              for <span className="font-semibold text-gray-800">"{results.query}"</span>
+              <span className="font-semibold text-gray-800">{results.totalFound}</span>
+              {" "}results for{" "}
+              <span className="font-semibold text-gray-800">&quot;{results.query}&quot;</span>
               {" "}across {results.platformsFound.join(", ")}
             </p>
             <p className="text-xs text-gray-400">
@@ -124,7 +174,6 @@ export default function PricesPage() {
             </p>
           </div>
 
-          {/* Best Deal Banner */}
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 mb-6 flex items-center gap-4">
             <div className="text-2xl">🏆</div>
             <div className="flex-1">
@@ -153,7 +202,6 @@ export default function PricesPage() {
             </a>
           </div>
 
-          {/* Results by Platform */}
           {Object.entries(results.byPlatform).map(([platform, meds]) => (
             <div key={platform} className="mb-6">
               <h2 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
@@ -162,55 +210,9 @@ export default function PricesPage() {
                 </span>
                 <span className="text-gray-400">{meds.length} results</span>
               </h2>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {meds.slice(0, 6).map((med) => (
-                  
-                    key={med._id}
-                    href={med.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-sm transition-all bg-white flex gap-3"
-                  >
-                    {/* Image */}
-                    {med.imageUrl ? (
-                      <img
-                        src={med.imageUrl}
-                        alt={med.medicineName}
-                        className="w-14 h-14 object-contain rounded-lg bg-gray-50 flex-shrink-0"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                      />
-                    ) : (
-                      <div className="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 text-xl">
-                        💊
-                      </div>
-                    )}
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-gray-800 leading-tight line-clamp-2 mb-1">
-                        {med.medicineName}
-                      </p>
-                      <p className="text-xs text-gray-400 mb-2">{med.unit}</p>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="text-sm font-bold text-gray-900">₹{med.price}</span>
-                          {med.mrp && med.mrp > med.price && (
-                            <span className="text-xs text-gray-400 line-through ml-1">₹{med.mrp}</span>
-                          )}
-                        </div>
-                        {med.discount && med.discount > 0 ? (
-                          <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
-                            {med.discount}% off
-                          </span>
-                        ) : !med.inStock ? (
-                          <span className="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded">
-                            Out of stock
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  </a>
+                  <MedicineCard key={med._id} med={med} />
                 ))}
               </div>
             </div>
@@ -218,7 +220,6 @@ export default function PricesPage() {
         </div>
       )}
 
-      {/* Empty State */}
       {!results && !loading && !error && (
         <div className="text-center py-16 text-gray-400">
           <div className="text-5xl mb-4">💊</div>
