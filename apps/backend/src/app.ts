@@ -13,6 +13,7 @@ import reminderRoutes from "./modules/reminders/reminder.routes";
 import priceRoutes from "./modules/prices/price.routes";
 import pushRoutes from "./notifications/push.routes";
 import userRoutes from "./modules/users/user.routes";
+import medicineRoutes from "./modules/medicines/medicine.routes";
 
 const app: Application = express();
 
@@ -29,10 +30,10 @@ app.use(cors({
 // ─── Rate Limiting ──────────────────────────────────────────────
 app.use(rateLimit({
   windowMs: CONSTANTS.RATE_LIMIT_WINDOW_MS,
-  max: CONSTANTS.RATE_LIMIT_MAX,
-  message: { success: false, message: "Too many requests. Please try again later." },
+  max:      CONSTANTS.RATE_LIMIT_MAX,
+  message:  { success: false, message: "Too many requests. Please try again later." },
   standardHeaders: true,
-  legacyHeaders: false,
+  legacyHeaders:   false,
 }));
 
 // ─── Body Parser ────────────────────────────────────────────────
@@ -73,9 +74,8 @@ app.use(`${CONSTANTS.API_PREFIX}/auth`,      authRoutes);
 app.use(`${CONSTANTS.API_PREFIX}/reminders`, reminderRoutes);
 app.use(`${CONSTANTS.API_PREFIX}/prices`,    priceRoutes);
 app.use(`${CONSTANTS.API_PREFIX}/push`,      pushRoutes);
-app.use(`${CONSTANTS.API_PREFIX}/users`, userRoutes);
-  app.use(`${CONSTANTS.API_PREFIX}/medicines`, medicineRoutes);
-  app.use(`${CONSTANTS.API_PREFIX}/medicines`, medicineRoutes););
+app.use(`${CONSTANTS.API_PREFIX}/users`,     userRoutes);
+app.use(`${CONSTANTS.API_PREFIX}/medicines`, medicineRoutes);
 
 // ─── Error Handling ──────────────────────────────────────────────
 app.use(notFoundHandler);
