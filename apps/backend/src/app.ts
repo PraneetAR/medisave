@@ -73,7 +73,9 @@ app.use(`${CONSTANTS.API_PREFIX}/auth`,      authRoutes);
 app.use(`${CONSTANTS.API_PREFIX}/reminders`, reminderRoutes);
 app.use(`${CONSTANTS.API_PREFIX}/prices`,    priceRoutes);
 app.use(`${CONSTANTS.API_PREFIX}/push`,      pushRoutes);
-app.use(`${CONSTANTS.API_PREFIX}/users`,     userRoutes);
+app.use(`${CONSTANTS.API_PREFIX}/users`, userRoutes);
+  app.use(`${CONSTANTS.API_PREFIX}/medicines`, medicineRoutes);
+  app.use(`${CONSTANTS.API_PREFIX}/medicines`, medicineRoutes););
 
 // ─── Error Handling ──────────────────────────────────────────────
 app.use(notFoundHandler);
