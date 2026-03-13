@@ -1,205 +1,232 @@
 "use client";
 
 import { useState } from "react";
-import { Search, ExternalLink, Loader2, TrendingDown, Clock } from "lucide-react";
-import { pricesApi } from "@/services/api";
-import { PriceSearchResult, PriceResult } from "@/types";
-import toast from "react-hot-toast";
+import api from "@/services/api";
+
+interface Medicine {
+  _id:          string;
+  medicineName: string;
+  platform:     string;
+  price:        number;
+  mrp:          number | null;
+  discount:     number | null;
+  unit:         string;
+  url:          string;
+  inStock:      boolean;
+  imageUrl:     string | null;
+}
+
+interface SearchResult {
+  query:          string;
+  totalFound:     number;
+  platformsFound: string[];
+  bestDeal:       Medicine;
+  byPlatform:     Record<string, Medicine[]>;
+  lastUpdated:    string;
+}
 
 const PLATFORM_COLORS: Record<string, string> = {
-  Netmeds:   "#3b5bdb",
-  PharmEasy: "#f59e0b",
-  "1mg":     "#22c55e",
+  PharmEasy: "bg-green-100 text-green-800",
+  Netmeds:   "bg-blue-100  text-blue-800",
+  Medkart:   "bg-purple-100 text-purple-800",
 };
 
-const SUGGESTIONS = ["Paracetamol", "Ibuprofen", "Amoxicillin", "Metformin"];
+const SUGGESTIONS = [
+  "paracetamol", "amoxicillin", "omeprazole",
+  "metformin", "atorvastatin", "azithromycin",
+  "cetirizine", "vitamin d3", "pantoprazole",
+];
 
 export default function PricesPage() {
-  const [query, setQuery]       = useState("");
-  const [result, setResult]     = useState<PriceSearchResult | null>(null);
-  const [loading, setLoading]   = useState(false);
+  const [query,   setQuery]   = useState("");
+  const [results, setResults] = useState<SearchResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState("");
 
-  const handleSearch = async (q?: string) => {
-    const searchTerm = q ?? query;
-    if (!searchTerm.trim()) { toast.error("Enter a medicine name"); return; }
+  const search = async (q = query) => {
+    if (!q.trim()) return;
     setLoading(true);
-    setResult(null);
+    setError("");
+    setResults(null);
     try {
-      const { data } = await pricesApi.search(searchTerm);
-      setResult(data.data);
-      if (q) setQuery(q);
+      const res = await api.get(`/medicines/search?q=${encodeURIComponent(q.trim())}`);
+      setResults(res.data.data);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? "Search failed");
-    } finally { setLoading(false); }
+      setError(err.response?.data?.message ?? "Search failed. Try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const discount = (r: PriceResult) =>
-    r.originalPrice
-      ? Math.round(((r.originalPrice - r.price) / r.originalPrice) * 100)
-      : null;
-
   return (
-    <div>
+    <div className="p-6 max-w-5xl mx-auto">
+
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-semibold text-slate-800"
-          style={{ fontFamily: "'Playfair Display', serif" }}>
-          Price Comparison
-        </h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Find the best price across Netmeds, PharmEasy, and 1mg
+        <h1 className="text-2xl font-bold text-gray-900">Medicine Price Comparison</h1>
+        <p className="text-gray-500 mt-1">
+          Compare prices across PharmEasy, Netmeds & Medkart
         </p>
       </div>
 
-      {/* Search */}
-      <div className="card mb-6">
-        <div className="flex gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              className="input-field pl-10"
-              placeholder="Search medicine... e.g. Paracetamol"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()} />
-          </div>
-          <button onClick={() => handleSearch()} disabled={loading}
-            className="btn-primary flex items-center gap-2 shrink-0">
-            {loading
-              ? <Loader2 className="w-4 h-4 animate-spin" />
-              : <Search className="w-4 h-4" />}
-            {loading ? "Searching..." : "Search"}
-          </button>
-        </div>
-
-        {/* Quick suggestions */}
-        <div className="flex items-center gap-2 mt-3 flex-wrap">
-          <span className="text-xs text-slate-400">Try:</span>
-          {SUGGESTIONS.map((s) => (
-            <button key={s} onClick={() => handleSearch(s)}
-              className="text-xs px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-[#3b5bdb18]
-                text-slate-600 hover:text-[#3b5bdb] transition-all duration-150 font-medium">
-              {s}
-            </button>
-          ))}
-        </div>
+      {/* Search Box */}
+      <div className="flex gap-3 mb-4">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && search()}
+          placeholder="Search medicine (e.g. paracetamol, metformin...)"
+          className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button
+          onClick={() => search()}
+          disabled={loading}
+          className="bg-blue-600 text-white px-6 py-3 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+        >
+          {loading ? "Searching..." : "Search"}
+        </button>
       </div>
 
-      {/* Loading skeleton */}
-      {loading && (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-24 bg-white rounded-2xl animate-pulse border border-slate-100" />
-          ))}
+      {/* Suggestions */}
+      <div className="flex flex-wrap gap-2 mb-8">
+        {SUGGESTIONS.map((s) => (
+          <button
+            key={s}
+            onClick={() => { setQuery(s); search(s); }}
+            className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1 rounded-full"
+          >
+            {s}
+          </button>
+        ))}
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm">
+          {error}
         </div>
       )}
 
       {/* Results */}
-      {result && !loading && (
+      {results && (
         <div>
-          {/* Meta info */}
+
+          {/* Summary */}
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <h2 className="font-semibold text-slate-800 capitalize">{result.searchKey}</h2>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
-                {result.meta.totalResults} results
-              </span>
-              {result.fromCache && (
-                <span className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
-                  <Clock className="w-3 h-3" /> Cached
-                </span>
-              )}
-            </div>
+            <p className="text-sm text-gray-500">
+              <span className="font-semibold text-gray-800">{results.totalFound}</span> results
+              for <span className="font-semibold text-gray-800">"{results.query}"</span>
+              {" "}across {results.platformsFound.join(", ")}
+            </p>
+            <p className="text-xs text-gray-400">
+              Updated {new Date(results.lastUpdated).toLocaleDateString("en-IN")}
+            </p>
           </div>
 
           {/* Best Deal Banner */}
-          {result.bestDeal && (
-            <div className="mb-4 p-4 rounded-2xl border-2 flex items-center gap-4"
-              style={{ borderColor: "#22c55e", backgroundColor: "#22c55e08" }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                style={{ backgroundColor: "#22c55e18" }}>
-                <TrendingDown className="w-5 h-5" style={{ color: "#22c55e" }} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-wide mb-0.5"
-                  style={{ color: "#16a34a" }}>
-                  Best Deal
-                </p>
-                <p className="font-medium text-slate-800 text-sm truncate">
-                  {result.bestDeal.productName}
-                </p>
-                <p className="text-xs text-slate-500">{result.bestDeal.platform}</p>
-              </div>
-              <div className="text-right shrink-0">
-                <p className="text-2xl font-bold" style={{ color: "#16a34a" }}>
-                  ₹{result.bestDeal.price}
-                </p>
-                <p className="text-xs text-slate-500">{result.bestDeal.unit}</p>
-              </div>
-              <a href={result.bestDeal.url} target="_blank" rel="noopener noreferrer"
-                className="btn-primary text-sm flex items-center gap-1.5 shrink-0"
-                style={{ backgroundColor: "#22c55e" }}>
-                Buy <ExternalLink className="w-3.5 h-3.5" />
-              </a>
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 mb-6 flex items-center gap-4">
+            <div className="text-2xl">🏆</div>
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-0.5">Best Deal</p>
+              <p className="font-semibold text-gray-900">{results.bestDeal.medicineName}</p>
+              <p className="text-xs text-gray-500">{results.bestDeal.platform}</p>
             </div>
-          )}
-
-          {/* All Results */}
-          <div className="space-y-3">
-            {result.results.map((r, i) => {
-              const disc = discount(r);
-              const color = PLATFORM_COLORS[r.platform] ?? "#3b5bdb";
-              const isBest = result.bestDeal?.platform === r.platform &&
-                result.bestDeal?.price === r.price;
-              return (
-                <div key={i} className="card flex items-center gap-4 py-4"
-                  style={{ opacity: r.inStock ? 1 : 0.55 }}>
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 text-white text-xs font-bold"
-                    style={{ backgroundColor: color }}>
-                    {r.platform.slice(0, 2)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                      <p className="font-medium text-slate-800 text-sm">{r.productName}</p>
-                      {isBest && <span className="badge-green">Best Price</span>}
-                      {!r.inStock && <span className="badge-red">Out of Stock</span>}
-                    </div>
-                    <p className="text-xs text-slate-500">{r.platform} · {r.unit}</p>
-                  </div>
-                  <div className="text-right shrink-0 mr-2">
-                    <p className="text-lg font-bold text-slate-800">₹{r.price}</p>
-                    {r.originalPrice && (
-                      <p className="text-xs text-slate-400 line-through">₹{r.originalPrice}</p>
-                    )}
-                    {disc && (
-                      <p className="text-xs font-medium" style={{ color: "#22c55e" }}>
-                        {disc}% off
-                      </p>
-                    )}
-                  </div>
-                  {r.inStock && (
-                    <a href={r.url} target="_blank" rel="noopener noreferrer"
-                      className="p-2 rounded-xl hover:bg-slate-100 transition-colors text-slate-400 hover:text-slate-600 shrink-0">
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
-                  )}
-                </div>
-              );
-            })}
+            <div className="text-right">
+              <p className="text-2xl font-bold text-green-700">₹{results.bestDeal.price}</p>
+              {results.bestDeal.mrp && (
+                <p className="text-xs text-gray-400 line-through">MRP ₹{results.bestDeal.mrp}</p>
+              )}
+              {results.bestDeal.discount && (
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                  {results.bestDeal.discount}% OFF
+                </span>
+              )}
+            </div>
+            
+              href={results.bestDeal.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-green-600 text-white text-xs px-4 py-2 rounded-lg hover:bg-green-700"
+            >
+              Buy Now
+            </a>
           </div>
+
+          {/* Results by Platform */}
+          {Object.entries(results.byPlatform).map(([platform, meds]) => (
+            <div key={platform} className="mb-6">
+              <h2 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <span className={`px-2 py-0.5 rounded-full text-xs ${PLATFORM_COLORS[platform] ?? "bg-gray-100 text-gray-700"}`}>
+                  {platform}
+                </span>
+                <span className="text-gray-400">{meds.length} results</span>
+              </h2>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {meds.slice(0, 6).map((med) => (
+                  
+                    key={med._id}
+                    href={med.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-sm transition-all bg-white flex gap-3"
+                  >
+                    {/* Image */}
+                    {med.imageUrl ? (
+                      <img
+                        src={med.imageUrl}
+                        alt={med.medicineName}
+                        className="w-14 h-14 object-contain rounded-lg bg-gray-50 flex-shrink-0"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
+                    ) : (
+                      <div className="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 text-xl">
+                        💊
+                      </div>
+                    )}
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-gray-800 leading-tight line-clamp-2 mb-1">
+                        {med.medicineName}
+                      </p>
+                      <p className="text-xs text-gray-400 mb-2">{med.unit}</p>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-sm font-bold text-gray-900">₹{med.price}</span>
+                          {med.mrp && med.mrp > med.price && (
+                            <span className="text-xs text-gray-400 line-through ml-1">₹{med.mrp}</span>
+                          )}
+                        </div>
+                        {med.discount && med.discount > 0 ? (
+                          <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
+                            {med.discount}% off
+                          </span>
+                        ) : !med.inStock ? (
+                          <span className="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded">
+                            Out of stock
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Empty state */}
-      {!result && !loading && (
-        <div className="card text-center py-16">
-          <span className="text-5xl mb-4 block">🔍</span>
-          <h3 className="font-semibold text-slate-800 mb-1">Search for a medicine</h3>
-          <p className="text-slate-500 text-sm">
-            Compare prices across multiple platforms instantly
-          </p>
+      {/* Empty State */}
+      {!results && !loading && !error && (
+        <div className="text-center py-16 text-gray-400">
+          <div className="text-5xl mb-4">💊</div>
+          <p className="text-lg font-medium text-gray-500">Search for any medicine</p>
+          <p className="text-sm">Compare prices instantly across 3 platforms</p>
         </div>
       )}
+
     </div>
   );
 }

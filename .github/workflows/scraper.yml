@@ -2,9 +2,12 @@ name: Medicine Price Scraper
 
 on:
   schedule:
-    - cron: '0 2 * * *'    # 7:30 AM IST daily
-    - cron: '0 14 * * *'   # 7:30 PM IST daily
-  workflow_dispatch:         # Manual trigger
+    - cron: '0 2 * * *'
+    - cron: '0 14 * * *'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   scrape:
@@ -12,17 +15,15 @@ jobs:
     timeout-minutes: 45
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
           cache-dependency-path: apps/backend/package-lock.json
 
-      - name: Install dependencies
+      - name: Install ALL dependencies (including dev)
         working-directory: apps/backend
         run: npm ci
 
@@ -30,13 +31,9 @@ jobs:
         working-directory: apps/backend
         env:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
-          NODE_ENV:    production
+          NODE_ENV: production
+          JWT_SECRET: placeholder
+          JWT_REFRESH_SECRET: placeholder
+          FRONTEND_URL: https://medisave-ashy.vercel.app
         run: npx ts-node -r tsconfig-paths/register src/scrapers/run-scraper.ts
 
-      - name: Upload logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: scraper-logs
-          path: apps/backend/*.log
-          retention-days: 3
