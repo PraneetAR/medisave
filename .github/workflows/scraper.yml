@@ -23,7 +23,7 @@ jobs:
           cache: 'npm'
           cache-dependency-path: apps/backend/package-lock.json
 
-      - name: Install ALL dependencies (including dev)
+      - name: Install dependencies
         working-directory: apps/backend
         run: npm ci
 
@@ -32,8 +32,10 @@ jobs:
         env:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
           NODE_ENV: production
-          JWT_SECRET: placeholder
-          JWT_REFRESH_SECRET: placeholder
+          JWT_ACCESS_SECRET: placeholder-not-used-by-scraper-xxxxxx
+          JWT_REFRESH_SECRET: placeholder-not-used-by-scraper-xxxxxx
           FRONTEND_URL: https://medisave-ashy.vercel.app
+          VAPID_PUBLIC_KEY: placeholder
+          VAPID_PRIVATE_KEY: placeholder
+          VAPID_EMAIL: placeholder@placeholder.com
         run: npx ts-node -r tsconfig-paths/register src/scrapers/run-scraper.ts
-
