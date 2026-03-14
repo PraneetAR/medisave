@@ -3,7 +3,6 @@
 > Cloud-based medicine reminder and price comparison SaaS — built on a zero budget using free-tier services.
 
 🔗 **Live:** https://medisave-ashy.vercel.app  
-📦 **Backend:** https://medisave.onrender.com  
 💻 **GitHub:** https://github.com/PraneetAR/medisave
 
 ---
