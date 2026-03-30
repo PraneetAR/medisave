@@ -3,6 +3,11 @@ import { connectDB } from "./config/db";
 import { env } from "./config/env";
 import { logger } from "./utils/logger";
 import { startReminderScheduler } from "./scheduler/reminder.job";
+import { uploadToS3 } from "./utils/s3";
+
+uploadToS3("test.json", JSON.stringify({ test: true }))
+  .then(() => console.log("S3 test upload success"))
+  .catch((err) => console.error("S3 test failed", err));
 
 const startServer = async (): Promise<void> => {
   await connectDB();

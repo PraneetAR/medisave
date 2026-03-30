@@ -7,6 +7,8 @@ import { scrapeMedkart } from "./medkart.scraper";
 import { Medicine } from "../modules/medicines/medicine.model";
 import { logger } from "../utils/logger";
 import dotenv from "dotenv";
+import { uploadToS3 } from "../utils/s3"; 
+ import { ScrapedMedicine } from "./base.scraper";
 
 dotenv.config();
 
@@ -35,6 +37,11 @@ const runScraper = async () => {
   await mongoose.connect(MONGO_URI);
   logger.info("✅ MongoDB connected");
 
+  // ✅ ADDED: results accumulator
+ 
+
+const allScrapedResults: ScrapedMedicine[] = [];
+
   const BATCH_SIZE  = 5;
   const totalBatches = Math.ceil(MEDICINE_LIST.length / BATCH_SIZE);
 
@@ -59,6 +66,9 @@ const runScraper = async () => {
             const mkR = r3.status === "fulfilled" ? r3.value : [];
 
             const all = [...peR, ...nmR, ...mkR];
+
+            // ✅ ADDED: collect results
+            allScrapedResults.push(...all);
 
             if (all.length === 0) {
               stats.skipped++;
@@ -95,7 +105,6 @@ const runScraper = async () => {
       )
     );
 
-    // Pause between batches
     if (i + BATCH_SIZE < MEDICINE_LIST.length) {
       logger.info("⏳ Pausing 5s...");
       await new Promise((r) => setTimeout(r, 5000));
@@ -114,7 +123,25 @@ const runScraper = async () => {
 ║ Skipped:      ${String(stats.skipped).padEnd(19)}║
 ╚══════════════════════════════════╝`);
 
+  // ✅ ADDED: generate & upload report
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const reportName = `scraper-report-${timestamp}.json`;
+
+  const reportContent = JSON.stringify({
+    timestamp: new Date().toISOString(),
+    stats,
+    results: allScrapedResults
+  }, null, 2);
+
+  logger.info(`📄 Generating report: ${reportName}`);
+
+try {
+  await uploadToS3(reportName, reportContent);
+} catch (err) {
+  logger.error(`❌ S3 Upload Failed: ${err}`);
+} finally {
   await mongoose.disconnect();
+}
   process.exit(0);
 };
 
