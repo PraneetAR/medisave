@@ -18,6 +18,8 @@ router.post("/refresh", validate(refreshSchema), (req, res, next) =>
   authController.refresh(req, res, next)
 );
 
+router.post("/verify-otp", authController.verifyOtp);
+
 router.get("/me", authenticate, (req, res, next) =>
   authController.me(req, res, next)
 );

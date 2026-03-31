@@ -3,17 +3,14 @@ import { ApiError } from "../../utils/ApiError";
 import { generateTokenPair, verifyRefreshToken } from "../../utils/token.service";
 import { logger } from "../../utils/logger";
 import { RegisterInput, LoginInput } from "./auth.validation";
+import { sendOtpEmail } from "../../utils/email.service";
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCK_DURATION_MS    = 15 * 60 * 1000; // 15 minutes
 
 export class AuthService {
 
-  async register(input: RegisterInput): Promise<{
-    user: IUser;
-    accessToken: string;
-    refreshToken: string;
-  }> {
+  async register(input: RegisterInput): Promise<{ message: string }> {
     const existingUser = await User.findOne({ email: input.email });
     if (existingUser) {
       throw new ApiError(409, "Email already registered");
@@ -26,26 +23,24 @@ export class AuthService {
       timezone:     input.timezone ?? "Asia/Kolkata",
     });
 
-    const { accessToken, refreshToken } = generateTokenPair(
-      user._id as any,
-      user.email
-    );
-
-    user.refreshToken = refreshToken;
+    // Generate OTP for registration
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.otp = otp;
+    user.otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    
     await user.save({ validateBeforeSave: false });
+    await sendOtpEmail(user.email, otp);
 
-    logger.info(`New user registered: ${user.email}`);
+    logger.info(`New user registered (pending verification): ${user.email}`);
 
-    return { user, accessToken, refreshToken };
+    return { message: "OTP sent to your email for verification" };
   }
 
   async login(
     input: LoginInput,
     ip?: string
   ): Promise<{
-    user: IUser;
-    accessToken: string;
-    refreshToken: string;
+    message: string;
   }> {
     const user = await User.findOne({ email: input.email }).select(
       "+passwordHash +refreshToken +failedLoginAttempts +lockUntil"
@@ -100,22 +95,36 @@ export class AuthService {
       throw new ApiError(401, message);
     }
 
-    // ─── Successful login ────────────────────────────────────────
-    // Reset failed attempts
-    user.failedLoginAttempts = 0;
-    user.lockUntil           = null;
-    user.lastLoginAt         = new Date();
-    user.lastLoginIp         = ip ?? null;
+    // ─── Successful login - Generate OTP ─────────────────────────
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.otp = otp;
+    user.otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
 
-    const { accessToken, refreshToken } = generateTokenPair(
-      user._id as any,
-      user.email
-    );
+    await user.save({ validateBeforeSave: false });
+    await sendOtpEmail(user.email, otp);
 
+    logger.info(`OTP sent to ${user.email} [IP: ${ip}]`);
+
+    return { message: "OTP sent to your email" };
+  }
+
+  async verifyOtp(email: string, otp: string, ip?: string) {
+    const user = await User.findOne({ email }).select("+otp +otpExpiresAt +refreshToken");
+
+    if (!user || user.otp !== otp || (user.otpExpiresAt && user.otpExpiresAt < new Date())) {
+      throw new ApiError(401, "Invalid or expired OTP");
+    }
+
+    // Clear OTP after successful verification
+    user.otp = null;
+    user.otpExpiresAt = null;
+    user.isEmailVerified = true;
+    user.lastLoginAt = new Date();
+    user.lastLoginIp = ip ?? null;
+
+    const { accessToken, refreshToken } = generateTokenPair(user._id as any, user.email);
     user.refreshToken = refreshToken;
     await user.save({ validateBeforeSave: false });
-
-    logger.info(`User logged in: ${user.email} [IP: ${ip}]`);
 
     return { user, accessToken, refreshToken };
   }

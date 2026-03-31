@@ -6,18 +6,14 @@ export class AuthController {
 
   async register(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { user, accessToken, refreshToken } = await authService.register(req.body);
+      const result = await authService.register(req.body);
       res.status(201).json(
-        new ApiResponse(201, "Registration successful", {
-          user,
-          accessToken,
-          refreshToken,
-        })
+        new ApiResponse(201, result.message, null)
       );
     } catch (err) { next(err); }
   }
 
-  async login(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async login(req: Request, res: Response, next: NextFunction): Promise<void> {     
     try {
       // Get real IP (works behind Render proxy)
       const ip =
@@ -25,19 +21,15 @@ export class AuthController {
         req.socket.remoteAddress ??
         "unknown";
 
-      const { user, accessToken, refreshToken } = await authService.login(
-        req.body,
-        ip
-      );
+      // Now only returns { message: "OTP sent to your email" }
+      const result = await authService.login(req.body, ip);
 
       res.status(200).json(
-        new ApiResponse(200, "Login successful", {
-          user,
-          accessToken,
-          refreshToken,
-        })
+        new ApiResponse(200, result.message, null)
       );
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   }
 
   async refresh(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -54,6 +46,18 @@ export class AuthController {
       res.status(200).json(new ApiResponse(200, "User fetched", user));
     } catch (err) { next(err); }
   }
+  async verifyOtp(req: Request, res: Response, next: NextFunction): Promise<void> {  
+  try {
+    const { email, otp } = req.body;
+    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0].trim() || req.socket.remoteAddress || "unknown";
+
+    const data = await authService.verifyOtp(email, otp, ip);
+    res.status(200).json(new ApiResponse(200, "Login successful", data));
+    } catch (err) { next(err); }
+  }
+
 }
+
+
 
 export const authController = new AuthController();

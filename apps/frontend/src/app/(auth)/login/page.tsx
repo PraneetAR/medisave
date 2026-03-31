@@ -7,12 +7,15 @@ import { Eye, EyeOff, Heart, Loader2, AlertCircle, Lock } from "lucide-react";
 import { authApi } from "@/services/api";
 import { useAuthStore } from "@/store/auth.store";
 import toast from "react-hot-toast";
+import { AxiosError } from "axios"; // Add this line
 
 export default function LoginPage() {
   const router  = useRouter();
   const setAuth = useAuthStore((s) => s.setAuth);
 
   const [form, setForm]       = useState({ email: "", password: "" });
+  const [otp, setOtp]         = useState("");
+  const [step, setStep]       = useState<"login" | "otp">("login");
   const [showPw, setShowPw]   = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
@@ -27,15 +30,37 @@ export default function LoginPage() {
     }
     setLoading(true);
     try {
-      const { data } = await authApi.login(form);
+      // Step 1: Just request the OTP
+      await authApi.login(form);
+      setStep("otp"); // Move to OTP entry step
+      toast.success("OTP sent to your email!");
+    } catch (err) {
+      const axiosError = err as AxiosError<{ message: string }>;
+      const status = axiosError.response?.status;
+      const msg = axiosError.response?.data?.message ?? "Login failed";
+      
+      if (status === 423) setLocked(true);
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    setError("");
+    if (otp.length !== 6) {
+      setError("Please enter a valid 6-digit OTP");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data } = await authApi.verifyOtp({ email: form.email, otp });
       setAuth(data.data.user, data.data.accessToken, data.data.refreshToken);
       toast.success(`Welcome back, ${data.data.user.name}!`);
       router.replace("/dashboard");
-    } catch (err: any) {
-      const status = err?.response?.status;
-      const msg    = err?.response?.data?.message ?? "Login failed";
-      if (status === 423) setLocked(true);
-      setError(msg);
+    } catch (err) {
+      const axiosError = err as AxiosError<{ message: string }>;
+      setError(axiosError.response?.data?.message ?? "Invalid OTP");
     } finally {
       setLoading(false);
     }
@@ -105,51 +130,68 @@ export default function LoginPage() {
           )}
 
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Email
-              </label>
-              <input type="email" placeholder="you@example.com"
-                className="input-field"
-                value={form.email}
-                onChange={(e) => {
-                  setError("");
-                  setForm({ ...form, email: e.target.value });
-                }}
-                onKeyDown={(e) => e.key === "Enter" && handleSubmit()} />
-            </div>
+            {step === "login" ? (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+                  <input type="email" placeholder="you@example.com"
+                    className="input-field"
+                    value={form.email}
+                    onChange={(e) => {
+                      setError("");
+                      setForm({ ...form, email: e.target.value });
+                    }}
+                    onKeyDown={(e) => e.key === "Enter" && handleSubmit()} />
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPw ? "text" : "password"}
-                  placeholder="••••••••"
-                  className="input-field pr-10"
-                  value={form.password}
-                  onChange={(e) => {
-                    setError("");
-                    setForm({ ...form, password: e.target.value });
-                  }}
-                  onKeyDown={(e) => e.key === "Enter" && handleSubmit()} />
-                <button type="button" onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2
-                    text-slate-400 hover:text-slate-600 transition-colors">
-                  {showPw
-                    ? <EyeOff className="w-4 h-4" />
-                    : <Eye className="w-4 h-4" />}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPw ? "text" : "password"}
+                      placeholder="••••••••"
+                      className="input-field pr-10"
+                      value={form.password}
+                      onChange={(e) => {
+                        setError("");
+                        setForm({ ...form, password: e.target.value });
+                      }}
+                      onKeyDown={(e) => e.key === "Enter" && handleSubmit()} />
+                    <button type="button" onClick={() => setShowPw(!showPw)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                      {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <button onClick={handleSubmit} disabled={loading || locked}
+                  className="btn-primary w-full flex items-center justify-center gap-2 mt-2">
+                  {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {locked ? "Account Locked" : loading ? "Sending OTP..." : "Get OTP"}
                 </button>
-              </div>
-            </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Enter OTP sent to {form.email}</label>
+                  <input type="text" placeholder="123456" maxLength={6}
+                    className="input-field text-center tracking-[1em] text-lg font-bold"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                    onKeyDown={(e) => e.key === "Enter" && handleVerifyOtp()} />
+                </div>
 
-            <button onClick={handleSubmit} disabled={loading || locked}
-              className="btn-primary w-full flex items-center
-                justify-center gap-2 mt-2">
-              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {locked ? "Account Locked" : loading ? "Signing in..." : "Sign in"}
-            </button>
+                <button onClick={handleVerifyOtp} disabled={loading}
+                  className="btn-primary w-full flex items-center justify-center gap-2 mt-2">
+                  {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {loading ? "Verifying..." : "Verify & Login"}
+                </button>
+
+                <button onClick={() => setStep("login")} className="text-sm text-slate-500 hover:text-slate-700 w-full text-center">
+                  ← Back to password
+                </button>
+              </>
+            )}
           </div>
 
           <p className="text-center text-sm text-slate-500 mt-6">

@@ -16,6 +16,9 @@ export interface IUser extends Document {
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
   isLocked(): boolean;
+  otp: string | null;            
+  otpExpiresAt: Date | null;      
+  isEmailVerified: boolean; 
 }
 
 const userSchema = new Schema<IUser>(
@@ -67,6 +70,22 @@ const userSchema = new Schema<IUser>(
       type: String,
       default: null,
     },
+
+    // OTP and email verification
+    otp: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    otpExpiresAt: {
+      type: Date,
+      default: null,
+      select: false,
+    },
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
@@ -99,6 +118,8 @@ userSchema.set("toJSON", {
     delete ret.refreshToken;
     delete ret.failedLoginAttempts;
     delete ret.lockUntil;
+    delete ret.otp;             
+    delete ret.otpExpiresAt;    
     delete ret.__v;
     return ret;
   },

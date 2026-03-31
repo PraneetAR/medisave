@@ -66,7 +66,10 @@ export const authApi = {
     api.post("/auth/register", data),
   login: (data: { email: string; password: string }) =>
     api.post("/auth/login", data),
+  verifyOtp: (data: { email: string; otp: string }) =>
+    api.post("/auth/verify-otp", data),
   me: () => api.get("/auth/me"),
+  
 };
 
 // ─── Reminders ────────────────────────────────────────────────────
