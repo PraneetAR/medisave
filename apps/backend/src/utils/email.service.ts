@@ -2,17 +2,18 @@ import nodemailer from "nodemailer";
 import { logger } from "./logger";
 
 const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
+    host: "64.233.184.108",
     port: 587,
-    secure: false, // Start with STARTTLS
-    requireTLS: true, // Force secure connection
+    secure: false, 
+    requireTLS: true, 
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
     },
     tls: {
+        servername: "smtp.gmail.com",
         rejectUnauthorized: false,
-        minVersion: "TLSv1.2"
+        
     }
 });
 
