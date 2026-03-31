@@ -4,16 +4,16 @@ import { logger } from "./logger";
 const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
     port: 587,
-    secure: false,
+    secure: false, // Start with STARTTLS
+    requireTLS: true, // Force secure connection
     auth: {
-        user: process.env.EMAIL_USER, // Add these to your .env
+        user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
-  },
-
-  tls: {
-    rejectUnauthorized: false,
-    minVersion: "TLSv1.2"
-  }
+    },
+    tls: {
+        rejectUnauthorized: false,
+        minVersion: "TLSv1.2"
+    }
 });
 
 export const sendOtpEmail = async (email: string, otp: string) => {
