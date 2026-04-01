@@ -32,10 +32,18 @@ jobs:
         env:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
           NODE_ENV: production
-          JWT_ACCESS_SECRET: placeholder-not-used-by-scraper-xxxxxx
-          JWT_REFRESH_SECRET: placeholder-not-used-by-scraper-xxxxxx
+          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET || 'placeholder-not-used-by-scraper-xxxxxx' }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET || 'placeholder-not-used-by-scraper-xxxxxx' }}
           FRONTEND_URL: https://medisave-ashy.vercel.app
-          VAPID_PUBLIC_KEY: placeholder
-          VAPID_PRIVATE_KEY: placeholder
-          VAPID_EMAIL: placeholder@placeholder.com
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY || 'placeholder' }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY || 'placeholder' }}
+          VAPID_EMAIL: ${{ secrets.VAPID_EMAIL || 'placeholder@placeholder.com' }}
+          # AWS Configuration (Required by Zod validation)
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION || 'ap-south-1' }}
+          AWS_S3_BUCKET_NAME: ${{ secrets.AWS_S3_BUCKET_NAME }}
+          # SendGrid (If the scraper sends any alerts)
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
         run: npx ts-node -r tsconfig-paths/register src/scrapers/run-scraper.ts
