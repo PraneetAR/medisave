@@ -54,10 +54,22 @@ export class AuthController {
     const data = await authService.verifyOtp(email, otp, ip);
     res.status(200).json(new ApiResponse(200, "Login successful", data));
     } catch (err) { next(err); }
-  }
+    }
 
-}
+    async forgotPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const result = await authService.forgotPassword(req.body);
+      res.status(200).json(new ApiResponse(200, result.message, null));
+    } catch (err) { next(err); }
+    }
 
+    async resetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const result = await authService.resetPassword(req.body);
+      res.status(200).json(new ApiResponse(200, result.message, null));
+    } catch (err) { next(err); }
+    }
 
+    }
 
-export const authController = new AuthController();
+    export const authController = new AuthController();

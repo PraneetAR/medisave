@@ -28,7 +28,11 @@ api.interceptors.response.use(
       _retry?: boolean;
     };
 
-    if (error.config?.url?.includes("/auth/login")) {
+    if (
+      error.config?.url?.includes("/auth/login") ||
+      error.config?.url?.includes("/auth/forgot-password") ||
+      error.config?.url?.includes("/auth/reset-password")
+    ) {
       return Promise.reject(error);
     }
 
@@ -72,6 +76,10 @@ export const authApi = {
     api.post("/auth/login", data),
   verifyOtp: (data: { email: string; otp: string }) =>
     api.post("/auth/verify-otp", data),
+  forgotPassword: (data: { email: string }) =>
+    api.post("/auth/forgot-password", data),
+  resetPassword: (data: { email: string; otp: string; password: string }) =>
+    api.post("/auth/reset-password", data),
   me: () => api.get("/auth/me"),
 };
 

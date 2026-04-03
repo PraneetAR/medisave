@@ -2,7 +2,7 @@ import { User, IUser } from "./auth.model";
 import { ApiError } from "../../utils/ApiError";
 import { generateTokenPair, verifyRefreshToken } from "../../utils/token.service";
 import { logger } from "../../utils/logger";
-import { RegisterInput, LoginInput } from "./auth.validation";
+import { RegisterInput, LoginInput, ForgotPasswordInput, ResetPasswordInput } from "./auth.validation";
 import { sendOtpEmail } from "../../utils/email.service";
 
 const MAX_FAILED_ATTEMPTS = 5;
@@ -167,6 +167,42 @@ export class AuthService {
     const user = await User.findById(userId);
     if (!user) throw new ApiError(404, "User not found");
     return user;
+  }
+
+  async forgotPassword(input: ForgotPasswordInput): Promise<{ message: string }> {
+    const user = await User.findOne({ email: input.email });
+    if (!user) {
+      // Don't reveal user doesn't exist for security
+      return { message: "If an account exists, a reset code has been sent to your email." };
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.otp = otp;
+    user.otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    
+    await user.save({ validateBeforeSave: false });
+    await sendOtpEmail(user.email, otp, "Password Reset OTP - MediSave");
+
+    return { message: "If an account exists, a reset code has been sent to your email." };
+  }
+
+  async resetPassword(input: ResetPasswordInput): Promise<{ message: string }> {
+    const user = await User.findOne({ email: input.email }).select("+otp +otpExpiresAt +passwordHash");
+
+    if (!user || user.otp !== input.otp || (user.otpExpiresAt && user.otpExpiresAt < new Date())) {
+      throw new ApiError(401, "Invalid or expired reset code");
+    }
+
+    // Update password and clear OTP
+    user.passwordHash = input.password;
+    user.otp = null;
+    user.otpExpiresAt = null;
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
+
+    await user.save();
+
+    return { message: "Password has been reset successfully. You can now login." };
   }
 }
 

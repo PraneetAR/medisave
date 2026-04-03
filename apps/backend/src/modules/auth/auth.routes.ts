@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authController } from "./auth.controller";
 import { validate } from "../../middlewares/validate";
 import { authenticate } from "../../middlewares/auth.middleware";
-import { registerSchema, loginSchema, refreshSchema } from "./auth.validation";
+import { registerSchema, loginSchema, refreshSchema, forgotPasswordSchema, resetPasswordSchema } from "./auth.validation";
 
 const router = Router();
 
@@ -12,6 +12,14 @@ router.post("/register", validate(registerSchema), (req, res, next) =>
 
 router.post("/login", validate(loginSchema), (req, res, next) =>
   authController.login(req, res, next)
+);
+
+router.post("/forgot-password", validate(forgotPasswordSchema), (req, res, next) =>
+  authController.forgotPassword(req, res, next)
+);
+
+router.post("/reset-password", validate(resetPasswordSchema), (req, res, next) =>
+  authController.resetPassword(req, res, next)
 );
 
 router.post("/refresh", validate(refreshSchema), (req, res, next) =>

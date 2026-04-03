@@ -3,19 +3,22 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Heart, Loader2, AlertCircle, Lock } from "lucide-react";
+import { Eye, EyeOff, Heart, Loader2, AlertCircle, Lock, KeyRound } from "lucide-react";
 import { authApi } from "@/services/api";
 import { useAuthStore } from "@/store/auth.store";
 import toast from "react-hot-toast";
-import { AxiosError } from "axios"; // Add this line
+import { AxiosError } from "axios";
+
+type Step = "login" | "otp" | "forgot_request" | "forgot_reset";
 
 export default function LoginPage() {
   const router  = useRouter();
   const setAuth = useAuthStore((s) => s.setAuth);
 
   const [form, setForm]       = useState({ email: "", password: "" });
+  const [resetForm, setResetForm] = useState({ otp: "", password: "" });
   const [otp, setOtp]         = useState("");
-  const [step, setStep]       = useState<"login" | "otp">("login");
+  const [step, setStep]       = useState<Step>("login");
   const [showPw, setShowPw]   = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
@@ -30,9 +33,8 @@ export default function LoginPage() {
     }
     setLoading(true);
     try {
-      // Step 1: Just request the OTP
       await authApi.login(form);
-      setStep("otp"); // Move to OTP entry step
+      setStep("otp");
       toast.success("OTP sent to your email!");
     } catch (err) {
       const axiosError = err as AxiosError<{ message: string }>;
@@ -66,6 +68,49 @@ export default function LoginPage() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    setError("");
+    if (!form.email) {
+      setError("Please enter your email address first");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data } = await authApi.forgotPassword({ email: form.email });
+      toast.success(data.message);
+      setStep("forgot_reset");
+    } catch (err) {
+      const axiosError = err as AxiosError<{ message: string }>;
+      setError(axiosError.response?.data?.message ?? "Failed to request reset");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    setError("");
+    if (resetForm.otp.length !== 6 || resetForm.password.length < 8) {
+      setError("Please fill all fields correctly (Password min 8 chars)");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data } = await authApi.resetPassword({
+        email: form.email,
+        otp: resetForm.otp,
+        password: resetForm.password
+      });
+      toast.success(data.message);
+      setStep("login");
+      setResetForm({ otp: "", password: "" });
+    } catch (err) {
+      const axiosError = err as AxiosError<{ message: string }>;
+      setError(axiosError.response?.data?.message ?? "Failed to reset password");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#f8fafc] flex">
       {/* Left panel */}
@@ -92,12 +137,9 @@ export default function LoginPage() {
           </p>
         </div>
         <div className="flex flex-col gap-2">
-          {["                                                                   "].map((f) => (
-            <span key={f} className="text-xs"
-              style={{ color: "rgba(255,255,255,0.4)" }}>
-              {f}
-            </span>
-          ))}
+          <span className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
+            &copy; 2024 MediSave
+          </span>
         </div>
       </div>
 
@@ -107,10 +149,12 @@ export default function LoginPage() {
           <div className="mb-8">
             <h1 className="text-3xl font-semibold text-slate-800 mb-2"
               style={{ fontFamily: "'Playfair Display', serif" }}>
-              Welcome back
+              {step === "forgot_reset" ? "Reset Password" : "Welcome back"}
             </h1>
             <p className="text-slate-500 text-sm">
-              Sign in to your MediSave account
+              {step === "forgot_reset" 
+                ? "Enter the code sent to your email" 
+                : "Sign in to your MediSave account"}
             </p>
           </div>
 
@@ -145,7 +189,16 @@ export default function LoginPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-sm font-medium text-slate-700">Password</label>
+                    <button 
+                      type="button"
+                      onClick={handleForgotPassword}
+                      className="text-xs font-medium text-indigo-600 hover:text-indigo-500"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
                   <div className="relative">
                     <input
                       type={showPw ? "text" : "password"}
@@ -170,7 +223,7 @@ export default function LoginPage() {
                   {locked ? "Account Locked" : loading ? "Sending OTP..." : "Get OTP"}
                 </button>
               </>
-            ) : (
+            ) : step === "otp" ? (
               <>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Enter OTP sent to {form.email}</label>
@@ -189,6 +242,47 @@ export default function LoginPage() {
 
                 <button onClick={() => setStep("login")} className="text-sm text-slate-500 hover:text-slate-700 w-full text-center">
                   ← Back to password
+                </button>
+              </>
+            ) : (
+              /* forgot_reset step */
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Reset Code (OTP)</label>
+                  <input type="text" placeholder="123456" maxLength={6}
+                    className="input-field text-center tracking-[1em] text-lg font-bold"
+                    value={resetForm.otp}
+                    onChange={(e) => setResetForm({ ...resetForm, otp: e.target.value.replace(/\D/g, "") })} />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">New Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPw ? "text" : "password"}
+                      placeholder="••••••••"
+                      className="input-field pr-10"
+                      value={resetForm.password}
+                      onChange={(e) => {
+                        setError("");
+                        setResetForm({ ...resetForm, password: e.target.value });
+                      }}
+                      onKeyDown={(e) => e.key === "Enter" && handleResetPassword()} />
+                    <button type="button" onClick={() => setShowPw(!showPw)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                      {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <button onClick={handleResetPassword} disabled={loading}
+                  className="btn-primary w-full flex items-center justify-center gap-2 mt-2">
+                  {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {loading ? "Resetting..." : "Reset Password"}
+                </button>
+
+                <button onClick={() => setStep("login")} className="text-sm text-slate-500 hover:text-slate-700 w-full text-center">
+                  ← Back to login
                 </button>
               </>
             )}

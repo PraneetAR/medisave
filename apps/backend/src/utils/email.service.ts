@@ -8,7 +8,7 @@ if (process.env.SENDGRID_API_KEY) {
   logger.warn("SENDGRID_API_KEY is not defined in environment variables");
 }
 
-export const sendOtpEmail = async (email: string, otp: string) => {
+export const sendOtpEmail = async (email: string, otp: string, subject = "Your Login OTP - MediSave") => {
   try {
     const msg = {
       to: email,
@@ -16,7 +16,7 @@ export const sendOtpEmail = async (email: string, otp: string) => {
         email: process.env.EMAIL_FROM as string,
         name: "MediSave",
       },
-      subject: "Your Login OTP - MediSave",
+      subject: subject,
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 500px; margin: auto;">
           <h2 style="color: #2c3e50; text-align: center;">MediSave Verification</h2>
