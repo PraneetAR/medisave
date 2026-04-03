@@ -12,18 +12,30 @@ export class AuthService {
 
   async register(input: RegisterInput): Promise<{ message: string }> {
     const existingUser = await User.findOne({ email: input.email });
-    if (existingUser) {
+    
+    // If user exists and is verified, they cannot re-register
+    if (existingUser && existingUser.isEmailVerified) {
       throw new ApiError(409, "Email already registered");
     }
 
-    const user = await User.create({
-      name:         input.name,
-      email:        input.email,
-      passwordHash: input.password,
-      timezone:     input.timezone ?? "Asia/Kolkata",
-    });
+    let user;
+    if (existingUser) {
+      // Reuse the existing unverified account, update its details
+      existingUser.name = input.name;
+      existingUser.passwordHash = input.password;
+      existingUser.timezone = input.timezone ?? "Asia/Kolkata";
+      user = existingUser;
+    } else {
+      // Create a brand new account
+      user = new User({
+        name:         input.name,
+        email:        input.email,
+        passwordHash: input.password,
+        timezone:     input.timezone ?? "Asia/Kolkata",
+      });
+    }
 
-    // Generate OTP for registration
+    // Generate/Regenerate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     user.otp = otp;
     user.otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
@@ -31,7 +43,7 @@ export class AuthService {
     await user.save({ validateBeforeSave: false });
     await sendOtpEmail(user.email, otp);
 
-    logger.info(`New user registered (pending verification): ${user.email}`);
+    logger.info(`User registration/re-try: ${user.email}`);
 
     return { message: "OTP sent to your email for verification" };
   }
