@@ -1,27 +1,25 @@
-import sgMail from "@sendgrid/mail";
+import * as SibApiV3Sdk from "@getbrevo/brevo";
 import { logger } from "./logger";
 
-// Initialize SendGrid with your API Key
-if (process.env.SENDGRID_API_KEY) {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+
+// Set Brevo API Key
+if (process.env.BREVO_API_KEY) {
+  apiInstance.setApiKey(SibApiV3Sdk.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
 } else {
-  logger.warn("SENDGRID_API_KEY is not defined in environment variables");
+  logger.warn("BREVO_API_KEY is not defined in environment variables");
 }
 
 export const sendOtpEmail = async (email: string, otp: string, subject = "Your Login OTP - MediSave") => {
   try {
-    const msg = {
-      to: email,
-      from: {
-        email: process.env.EMAIL_FROM as string,
-        name: "MediSave",
-      },
-      subject: subject,
-      html: `
+    const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+
+    sendSmtpEmail.subject = subject;
+    sendSmtpEmail.htmlContent = `
         <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 500px; margin: auto;">
           <h2 style="color: #2c3e50; text-align: center;">MediSave Verification</h2>
           <p>Hello,</p>
-          <p>Your One-Time Password (OTP) for logging into MediSave is:</p>
+          <p>Your One-Time Password (OTP) for MediSave is:</p>
           <div style="background: #f4f7f6; padding: 15px; font-size: 28px; font-weight: bold; text-align: center; letter-spacing: 5px; color: #1abc9c; border-radius: 5px; margin: 20px 0;">
             ${otp}
           </div>
@@ -29,13 +27,17 @@ export const sendOtpEmail = async (email: string, otp: string, subject = "Your L
           <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
           <p style="font-size: 12px; color: #bdc3c7; text-align: center;">&copy; 2024 MediSave. All rights reserved.</p>
         </div>
-      `,
+      `;
+    sendSmtpEmail.sender = { 
+      name: "MediSave", 
+      email: process.env.EMAIL_FROM as string 
     };
+    sendSmtpEmail.to = [{ email: email }];
 
-    await sgMail.send(msg);
-    logger.info(`OTP sent to ${email} via SendGrid`);
+    await apiInstance.sendTransacEmail(sendSmtpEmail);
+    logger.info(`OTP sent to ${email} via Brevo`);
   } catch (error: any) {
-    logger.error("SendGrid Email failed", error.response?.body || error.message);
+    logger.error("Brevo Email failed", error.response?.body || error.message);
     throw new Error("Could not send OTP email");
   }
 };
