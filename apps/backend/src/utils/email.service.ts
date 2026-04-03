@@ -1,13 +1,15 @@
 import * as SibApiV3Sdk from "@getbrevo/brevo";
 import { logger } from "./logger";
 
+// Create the API instance
 const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 
-// Set Brevo API Key
+// Robust way to set the API key for Brevo v2 SDK
+const auth = (apiInstance as any).authentications['apiKey'];
 if (process.env.BREVO_API_KEY) {
-  apiInstance.setApiKey(SibApiV3Sdk.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
+  auth.apiKey = process.env.BREVO_API_KEY;
 } else {
-  logger.warn("BREVO_API_KEY is not defined in environment variables");
+  logger.warn("BREVO_API_KEY is missing from environment variables!");
 }
 
 export const sendOtpEmail = async (email: string, otp: string, subject = "Your Login OTP - MediSave") => {
@@ -28,6 +30,7 @@ export const sendOtpEmail = async (email: string, otp: string, subject = "Your L
           <p style="font-size: 12px; color: #bdc3c7; text-align: center;">&copy; 2024 MediSave. All rights reserved.</p>
         </div>
       `;
+    
     sendSmtpEmail.sender = { 
       name: "MediSave", 
       email: process.env.EMAIL_FROM as string 
@@ -37,7 +40,8 @@ export const sendOtpEmail = async (email: string, otp: string, subject = "Your L
     await apiInstance.sendTransacEmail(sendSmtpEmail);
     logger.info(`OTP sent to ${email} via Brevo`);
   } catch (error: any) {
-    logger.error("Brevo Email failed", error.response?.body || error.message);
+    const errorDetail = error.response?.body?.message || error.message;
+    logger.error("Brevo Email failed", { error: errorDetail });
     throw new Error("Could not send OTP email");
   }
 };
