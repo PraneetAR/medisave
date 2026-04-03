@@ -136,6 +136,10 @@ export default function LoginPage() {
             Manage medicines smarter. Pay less every time.
           </p>
         </div>
+        <div className="flex flex-col gap-2">
+          <span className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
+          </span>
+        </div>
       </div>
 
       {/* Right panel */}
