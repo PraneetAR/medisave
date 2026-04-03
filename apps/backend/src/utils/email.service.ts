@@ -1,26 +1,29 @@
 import * as SibApiV3Sdk from "@getbrevo/brevo";
 import { logger } from "./logger";
+import { env } from "../config/env";
 
-// Get the global API client instance
-const defaultClient = SibApiV3Sdk.ApiClient.instance;
-
-// Configure API key authorization: 'api-key'
-const apiKey = defaultClient.authentications['api-key'];
-
-if (process.env.BREVO_API_KEY) {
-  apiKey.apiKey = process.env.BREVO_API_KEY;
-} else {
-  logger.error("CRITICAL: BREVO_API_KEY is missing from environment variables!");
-}
-
-// Create the API instance
+// 1. Initialize the Brevo Transactional Emails API instance
 const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 
+// 2. Set the API key using the correct enum property 'apiKey'
+(apiInstance as any).setApiKey(
+  SibApiV3Sdk.TransactionalEmailsApiApiKeys.apiKey, 
+  env.BREVO_API_KEY
+);
+
+/**
+ * Sends a One-Time Password (OTP) via Brevo's SMTP API
+ * @param email - Recipient's email address
+ * @param otp   - The 6-digit numeric code
+ * @param subject - Custom email subject (useful for password resets)
+ */
 export const sendOtpEmail = async (email: string, otp: string, subject = "Your Login OTP - MediSave") => {
   try {
     const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
 
-    sendSmtpEmail.subject = subject;
+    sendSmtpEmail.subject     = subject;
+    sendSmtpEmail.sender      = { name: "MediSave", email: env.EMAIL_FROM };
+    sendSmtpEmail.to          = [{ email }];
     sendSmtpEmail.htmlContent = `
         <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 500px; margin: auto;">
           <h2 style="color: #2c3e50; text-align: center;">MediSave Verification</h2>
@@ -34,18 +37,12 @@ export const sendOtpEmail = async (email: string, otp: string, subject = "Your L
           <p style="font-size: 12px; color: #bdc3c7; text-align: center;">&copy; 2024 MediSave. All rights reserved.</p>
         </div>
       `;
-    
-    sendSmtpEmail.sender = { 
-      name: "MediSave", 
-      email: process.env.EMAIL_FROM as string 
-    };
-    sendSmtpEmail.to = [{ email: email }];
 
     await apiInstance.sendTransacEmail(sendSmtpEmail);
-    logger.info(`OTP sent to ${email} via Brevo`);
+    logger.info(`OTP sent successfully to ${email}`);
   } catch (error: any) {
-    const detail = error.response?.body?.message || error.message;
-    logger.error("Brevo Email failed", { detail });
-    throw new Error("Could not send OTP email");
+    const detail = error.response?.body?.message || error.message || "Unknown Brevo Error";
+    logger.error("Brevo Email failed", { detail, status: error.response?.status });
+    throw new Error("Could not send verification email. Please try again later.");
   }
 };

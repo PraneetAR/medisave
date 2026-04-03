@@ -1,22 +1,17 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "MediSave Backend API",
+  "main": "dist/server.js",
   "scripts": {
     "dev": "nodemon --watch src --ext ts --exec ts-node src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "lint": "tsc --noEmit"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1019.0",
     "@getbrevo/brevo": "^2.0.0-beta.4",
-    "@sendgrid/mail": "^8.1.6",
     "axios": "^1.13.6",
     "axios-retry": "^4.5.0",
     "bcryptjs": "^3.0.3",
@@ -32,7 +27,6 @@
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.4",
     "p-limit": "^7.3.0",
-    "resend": "^6.10.0",
     "web-push": "^3.6.7",
     "winston": "^3.19.0",
     "zod": "^4.3.6"

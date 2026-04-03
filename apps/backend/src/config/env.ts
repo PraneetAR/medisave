@@ -25,6 +25,8 @@ const envSchema = z.object({
   AWS_SECRET_ACCESS_KEY: z.string().min(1, "AWS_SECRET_ACCESS_KEY is required"),
   AWS_REGION: z.string().default("ap-south-1"),
   AWS_S3_BUCKET_NAME: z.string().min(1, "AWS_S3_BUCKET_NAME is required"),
+  BREVO_API_KEY: z.string().min(1, "BREVO_API_KEY is required"),
+  EMAIL_FROM: z.string().email("Invalid sender email"),
 });
 
 const parsed = envSchema.safeParse(process.env);
