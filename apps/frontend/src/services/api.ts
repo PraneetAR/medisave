@@ -28,6 +28,10 @@ api.interceptors.response.use(
       _retry?: boolean;
     };
 
+    if (error.config?.url?.includes("/auth/login")) {
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && !original?._retry) {
       original._retry = true;
       try {
@@ -69,7 +73,6 @@ export const authApi = {
   verifyOtp: (data: { email: string; otp: string }) =>
     api.post("/auth/verify-otp", data),
   me: () => api.get("/auth/me"),
-  
 };
 
 // ─── Reminders ────────────────────────────────────────────────────
