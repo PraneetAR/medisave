@@ -43,7 +43,6 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION || 'ap-south-1' }}
           AWS_S3_BUCKET_NAME: ${{ secrets.AWS_S3_BUCKET_NAME }}
-          # SendGrid (If the scraper sends any alerts)
-          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
-          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY || 'placeholder' }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM || 'no-reply@medisave.com' }}
         run: npx ts-node -r tsconfig-paths/register src/scrapers/run-scraper.ts
